@@ -1,0 +1,33 @@
+name: Deploy Carousel HTML
+
+on:
+  repository_dispatch:
+    types: [update-carousel]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Decode Private Key
+        run: echo "${{ secrets.GITHUB_APP_PRIVATE_KEY }}" | base64 --decode > private-key.pem
+
+      - name: Authenticate GitHub App
+        id: app-auth
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.GITHUB_APP_ID }}
+          private_key: ${{ secrets.GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Commit new carousel.html
+        run: |
+          echo "${{ github.event.client_payload.html_content }}" > carousel.html
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add carousel.html
+          git commit -m "Updated carousel.html" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ steps.app-auth.outputs.token }}
